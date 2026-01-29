@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  backend:
+    image: fruitcake514/hosting-manager-backend:latest
+    container_name: app-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST_UID=${HOST_UID:-1000}          # Default to UID 1000
+      - HOST_GID=${HOST_GID:-1000}          # Default to GID 1000
+    volumes:
+      - ./sites:/app/sites                 # Site storage
+      - ./nginx/sites:/etc/nginx/sites-available
+
+  frontend:
+    image: fruitcake514/hosting-manager-frontend:latest
+    container_name: app-frontend
+    ports:
+      - "3000:3000"
+
+  nginx:
+    image: nginx:1.23-alpine
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./sites:/usr/share/nginx/html
+      - ./nginx/sites:/etc/nginx/sites-enabled
+
+  wordpress-db:
+    image: mysql:5.7
+    container_name: wordpress-db
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: root_password
+    volumes:
+      - db_data:/var/lib/mysql
+
+  wordpress:
+    image: wordpress:latest
+    container_name: wordpress
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: wordpress-db:3306
+      WORDPRESS_DB_USER: user
+      WORDPRESS_DB_PASSWORD: password
+      WORDPRESS_DB_NAME: wordpress
+    depends_on:
+      - wordpress-db
+    volumes:
+      - ./sites:/var/www/html
+      - ./nginx/wordpress:/etc/nginx/sites-enabled
+
+volumes:
+  db_data:
